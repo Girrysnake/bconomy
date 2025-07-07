@@ -1,0 +1,45 @@
+name: Bconomy Fetch and Artifact Upload
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # Allow pushing back to repo
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: pip install pandas openpyxl requests
+
+    - name: Run Bconomy Fetch Script
+      env:
+        bconomyapikey: ${{ secrets.BCONOMYAPIKEY }}
+      run: python bconomyapi.py
+
+    - name: Commit and Push Updated Excel
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add bconomy.xlsx
+        git commit -m "Update Excel with new data [auto]" || echo "No changes to commit"
+        git push
+
+    - name: Upload Excel as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bconomy-excel
+        path: bconomy.xlsx
